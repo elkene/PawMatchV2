@@ -440,10 +440,10 @@ class PawMatchApp {
             const pet = await PawMatchAPI.getPetById(petId);
 
             const modalHtml = `
-                <div class="modal show" onclick="this.classList.remove('show')">
+                <div class="modal show">
                     <div class="modal-content" onclick="event.stopPropagation()">
                         <div class="modal-header">
-                            <h2>${pet.name}</h2>
+                            <h2 style="margin: 0;">${pet.name}</h2>
                             <button class="modal-close">&times;</button>
                         </div>
                         <div class="pet-detail">
@@ -501,15 +501,43 @@ class PawMatchApp {
             modal.innerHTML = modalHtml;
             document.body.appendChild(modal);
 
-            document.getElementById('adopt-btn').addEventListener('click', async () => {
-                try {
-                    await PawMatchAPI.createAdoption(petId);
+            // Handler para cerrar modal con el botón close
+            modal.querySelector('.modal-close').addEventListener('click', (e) => {
+                e.stopPropagation();
+                modal.remove();
+            });
+
+            // Handler para cerrar modal al hacer click fuera
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
                     modal.remove();
-                    this.showAlert('¡Solicitud de adopción enviada!', 'success');
-                } catch (error) {
-                    this.showAlert('Error: ' + error.message, 'danger');
                 }
             });
+
+            // Handler para el botón de adopción
+            const adoptBtn = modal.querySelector('#adopt-btn');
+            if (adoptBtn) {
+                adoptBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    try {
+                        if (!this.currentUser?.id) {
+                            this.showAlert('Debes iniciar sesión para solicitar una adopción', 'warning');
+                            return;
+                        }
+                        adoptBtn.disabled = true;
+                        adoptBtn.textContent = 'Enviando...';
+
+                        await PawMatchAPI.createAdoption(petId);
+                        modal.remove();
+                        this.showAlert('¡Solicitud de adopción enviada correctamente!', 'success');
+                    } catch (error) {
+                        adoptBtn.disabled = false;
+                        adoptBtn.textContent = 'Solicitar Adopción';
+                        this.showAlert('Error: ' + error.message, 'danger');
+                        console.error('Error:', error);
+                    }
+                });
+            }
 
         } catch (error) {
             this.showAlert('Error al cargar mascota: ' + error.message, 'danger');
